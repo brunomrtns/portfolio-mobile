@@ -1,0 +1,257 @@
+#!/bin/bash
+
+set -e
+
+PARENT_PATH=$(
+    cd "$(dirname "${BASH_SOURCE[0]}")"
+    pwd -P
+)
+
+source "${PARENT_PATH}/utils_functions/create_android_manifest" || {
+    echo "Erro ao carregar create_android_manifest"
+    exit 1
+}
+
+source "${PARENT_PATH}/utils_functions/wait_system_ready" || {
+    echo "Erro ao carregar wait system ready"
+    exit 1
+}
+
+INSTANCE_NAME="ubuntu-jammy-build-package"
+PROJECT_NAME="reactnative"
+PROJECT_IN_VM_DIR="/home/ubuntu/${PROJECT_NAME}"
+OUTPUT_TAR="${PARENT_PATH}/../tars"
+ANDROID_SDK_PATH="/opt/android-sdk"
+JAVA_HOME_PATH="/usr/lib/jvm/java-17-openjdk-amd64"
+PROJECT_DOMAIN="com.brunomrtns.${PROJECT_NAME}"
+ANDROID_LOCAL_PROPERTIES="sdk.dir=${ANDROID_SDK_PATH}"
+MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+MANIFEST_DIR="android/app/src/main"
+LOG_VM_DIR="/var/log/${PROJECT_NAME}"
+LOG_LOCAL_DIR="${PARENT_PATH}/my_logs"
+APPLICATION_ICON="./assets/images/adaptive-icon.png"
+
+rm -rf "${OUTPUT_TAR}"
+mkdir -p "${OUTPUT_TAR}"
+
+STATUS=$(incus list --format csv | grep "^${INSTANCE_NAME}," | cut -d',' -f2)
+
+echo "Status da instância '${INSTANCE_NAME}': ${STATUS}"
+
+if [[ "${STATUS}" != "RUNNING" ]]; then
+    echo "A instância '${INSTANCE_NAME}' não está em execução. Tentando iniciar..."
+
+    if incus start "${INSTANCE_NAME}"; then
+        wait_system_ready ${INSTANCE_NAME}
+        echo "Instância '${INSTANCE_NAME}' iniciada com sucesso."
+    else
+        echo "Erro ao iniciar a instância '${INSTANCE_NAME}'."
+    fi
+else
+    echo "A instância '${INSTANCE_NAME}' já está em execução."
+fi
+
+echo "Compactando o projeto..."
+
+tar -czf "${OUTPUT_TAR}/${PROJECT_NAME}.tar.gz" -C "${PARENT_PATH}" . || {
+    echo "Erro ao criar o arquivo .tar.gz"
+    exit 1
+}
+
+if [[ ! -f "${OUTPUT_TAR}/${PROJECT_NAME}.tar.gz" ]]; then
+    echo "Erro: Arquivo compactado não foi criado."
+    exit 1
+fi
+
+TAR_FILE=$(realpath "${OUTPUT_TAR}/${PROJECT_NAME}.tar.gz")
+
+incus exec "${INSTANCE_NAME}" -- mkdir -p "${PROJECT_IN_VM_DIR}" || {
+    echo "Erro ao criar o diretório de destino na VM."
+    exit 1
+}
+
+# Transferir o arquivo para a VM
+echo "Transferindo o arquivo compactado para a VM..."
+incus file push "${TAR_FILE}" "${INSTANCE_NAME}${PROJECT_IN_VM_DIR}/" || {
+    echo "Erro ao copiar o arquivo para a VM."
+    exit 1
+}
+
+echo "Transferência concluída com sucesso."
+
+rm -rf "${OUTPUT_TAR}"
+rm -rf "${LOG_LOCAL_DIR}/build.log"
+
+echo "Executando na VM ${INSTANCE_NAME}..."
+
+incus exec ${INSTANCE_NAME} -- bash -c "
+    set -e
+    apt -y install imagemagick
+    echo 'Verificando diretório do projeto...'
+    mkdir -p ${PROJECT_IN_VM_DIR}
+    cd ${PROJECT_IN_VM_DIR}
+    
+    apt install -y libxml2-utils
+    echo 'Extraindo o projeto...'
+    tar -xzf ${PROJECT_NAME}.tar.gz
+    rm -f ${PROJECT_NAME}.tar.gz
+
+    source \"utils_functions/update_gradle_properties\"
+    source \"utils_functions/update_android_app_build_gradle\"
+    source \"utils_functions/create_android_manifest\"
+    source \"utils_functions/adaptive_icons\"
+    source \"utils_functions/configure_app_json\"
+
+    echo 'Limpando caches e arquivos antigos...'
+    rm -rf package-lock.json yarn.lock node_modules
+    rm -rf ~/.gradle/caches android/
+    rm -rf ~/.gradle/wrapper/ ~/.gradle/native ~/.gradle/daemon/
+    mkdir -p \"\$(dirname \"${LOG_VM_DIR}/build.log\")\"
+    : > \"${LOG_VM_DIR}/build.log\"
+    chmod -R +rw \"${LOG_VM_DIR}\"
+
+    configure_app_json \"app.json\" \"${PROJECT_NAME}\" \"${PROJECT_DOMAIN}\"
+
+    echo 'Instalando dependências...'
+    yarn install
+
+    echo 'Configurando o Android SDK e Java...'
+    export JAVA_HOME=${JAVA_HOME_PATH}
+    export PATH=\$JAVA_HOME/bin:${ANDROID_SDK_PATH}/cmdline-tools/latest/bin:${ANDROID_SDK_PATH}/platform-tools:\$PATH
+
+    echo 'Executando expo eject...'
+    npx expo eject --non-interactive || {
+        echo 'Erro ao executar expo eject.';
+        exit 1;
+    }
+
+    echo \"${ANDROID_LOCAL_PROPERTIES}\" > android/local.properties
+
+    yes | ${ANDROID_SDK_PATH}/cmdline-tools/latest/bin/sdkmanager --licenses
+    
+    adaptive_icons \"${APPLICATION_ICON}\"
+
+    sed -i '/include \":node_modules\/react-native\/node_modules\/@react-native\/gradle-plugin\"/d' android/settings.gradle
+
+    echo 'Atualizando gradle.properties...'
+    update_gradle_properties android/gradle.properties 'org.gradle.jvmargs' '-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8'
+    update_gradle_properties android/gradle.properties 'org.gradle.parallel' 'true'
+    update_gradle_properties android/gradle.properties 'android.useAndroidX' 'true'
+    update_gradle_properties android/gradle.properties 'android.enableJetifier' 'true'
+    update_gradle_properties android/gradle.properties 'hermesEnabled' 'true'
+    update_gradle_properties android/gradle.properties 'kotlin.compiler.execution.strategy' 'in-process'
+    update_gradle_properties android/gradle.properties 'expo.useLegacyPackaging' 'true'
+
+    echo 'Atualizando build.gradle (app)...'
+    sed -i 's/if (hermesEnabled.toBoolean()) {/if (project.hasProperty(\"hermesEnabled\") \&\& hermesEnabled.toBoolean()) {/' android/app/build.gradle
+
+    echo 'Corrigindo duplicação de plugins no settings.gradle...'
+    sed -i '/include \":node_modules\/react-native\/node_modules\/@react-native\/gradle-plugin\"/d' android/settings.gradle
+
+    #### FIXME -> Sobreescrevendo completamente o arquivo AndroidManifest.xml
+    create_android_manifest \"${PROJECT_DOMAIN}\" \"${MANIFEST_FILE}\"
+
+    update_android_app_build_gradle \"${PROJECT_DOMAIN}\" \"android/build.gradle\" \"android/app/build.gradle\" \"1.9.10\" \"34.0.0\"
+
+    xmllint --noout \"${MANIFEST_FILE}\" || {
+        echo \"[ERRO]: AndroidManifest.xml está mal formado.\"
+        cat \"${MANIFEST_FILE}\"
+        exit 1
+    }
+
+    echo 'Removendo recursos duplicados...'
+    for dir in \$(find android/app/src/main/res/ -type d -name \"mipmap-*\"); do
+        for file in \$(find \$dir -type f -name \"*.png\"); do
+            base_name=\$(basename \"\$file\" .png)
+            if [ -f \"\$dir/\$base_name.webp\" ]; then
+                echo \"Removendo arquivo duplicado: \$file\"
+                rm \"\$file\"
+            fi
+        done 
+    done
+
+    echo 'Preparando para build...'
+    cd android/
+
+    echo \"=== ETAPA 2: Limpando build anterior ===\" | tee -a ${LOG_VM_DIR}/build.log
+    ./gradlew clean 2>&1 | tee -a ${LOG_VM_DIR}/build.log || { echo \"Falha na etapa 2: ./gradlew clean\" | tee -a ${LOG_VM_DIR}/build.log; exit 1; }
+
+    echo \"=== ETAPA 6: Construindo APK ===\" | tee -a ${LOG_VM_DIR}/build.log
+    ./gradlew assembleRelease --stacktrace --info 2>&1 | tee -a ${LOG_VM_DIR}/build.log
+
+    echo 'Build concluído com sucesso!' | tee -a ${LOG_VM_DIR}/build.log
+" || {
+    echo "Erro durante o processo na VM ${INSTANCE_NAME}"
+    incus exec ${INSTANCE_NAME} -- bash -c "
+        cd \"${PROJECT_IN_VM_DIR}\"
+
+        echo \"\${GRADLE_DEPENDENCIES}\"
+
+        echo '--- AndroidManifest.xml ---' | tee -a ${LOG_VM_DIR}/build.log
+        if [ -f \"${MANIFEST_FILE}\" ]; then
+            cat \"${MANIFEST_FILE}\" | tee -a ${LOG_VM_DIR}/build.log
+        else
+            echo 'AndroidManifest.xml não encontrado!' | tee -a ${LOG_VM_DIR}/build.log
+        fi
+
+        echo '--- build.gradle (projeto) ---' | tee -a ${LOG_VM_DIR}/build.log
+        if [ -f \"android/build.gradle\" ]; then
+            cat \"android/build.gradle\" | tee -a ${LOG_VM_DIR}/build.log
+        else
+            echo 'build.gradle (projeto) não encontrado!' | tee -a ${LOG_VM_DIR}/build.log
+        fi
+
+        echo '--- build.gradle (app) ---' | tee -a ${LOG_VM_DIR}/build.log
+        if [ -f \"android/app/build.gradle\" ]; then
+            cat \"android/app/build.gradle\" | tee -a ${LOG_VM_DIR}/build.log
+        else
+            echo 'build.gradle (app) não encontrado!' | tee -a ${LOG_VM_DIR}/build.log
+        fi
+
+        echo '--- gradle.properties ---'
+        if [ -f \"android/gradle.properties\" ]; then
+            cat \"android/gradle.properties\" | tee -a ${LOG_VM_DIR}/build.log
+        else
+            echo 'gradle.properties não encontrado!' | tee -a ${LOG_VM_DIR}/build.log
+        fi
+
+        echo '--- local.properties ---' | tee -a ${LOG_VM_DIR}/build.log
+        if [ -f \"android/local.properties\" ]; then
+            cat \"android/local.properties\" | tee -a ${LOG_VM_DIR}/build.log
+        else
+            echo 'local.properties não encontrado!' | tee -a ${LOG_VM_DIR}/build.log
+        fi
+
+        echo '--- settings.gradle ---' | tee -a ${LOG_VM_DIR}/build.log
+        if [ -f \"android/settings.gradle\" ]; then
+            cat \"android/settings.gradle\" | tee -a ${LOG_VM_DIR}/build.log
+        else
+            echo 'settings.gradle não encontrado!' | tee -a ${LOG_VM_DIR}/build.log
+        fi
+
+        echo '--- Finalizando depuração de arquivos importantes ---' | tee -a ${LOG_VM_DIR}/build.log
+    "
+    incus file pull "${INSTANCE_NAME}${LOG_VM_DIR}/build.log" "${LOG_LOCAL_DIR}" || {
+        echo \"Erro ao copiar o LOG de erro gerado para o host\"
+    }
+    exit 1
+}
+
+incus file pull "${INSTANCE_NAME}${LOG_VM_DIR}/build.log" "${LOG_LOCAL_DIR}" || {
+    echo "Erro ao copiar o LOG de sucesso gerado para o host"
+}
+
+APK_PATH="${PROJECT_IN_VM_DIR}/android/app/build/outputs/apk/release/app-release.apk"
+echo "Copiando APK gerado de volta para o host..."
+mkdir -p "${PARENT_PATH}/compiled_apk"
+incus file pull "${INSTANCE_NAME}${APK_PATH}" "${PARENT_PATH}/compiled_apk/app-release.apk" || {
+    echo \"Erro ao copiar o APK gerado para o host\"
+    exit 1
+}
+
+echo "Build concluído com sucesso! APK disponível em: ${PARENT_PATH}/compiled_apk/app-release.apk"
+
+incus stop ${INSTANCE_NAME} -f || {
+    echo "Erro ao parar a VM"
+    exit 1
+}

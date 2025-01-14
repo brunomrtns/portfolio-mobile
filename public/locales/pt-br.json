@@ -1,0 +1,98 @@
+{
+  "applicationName": "Bruno GPT",
+  "homeScreen": {
+    "welcome": "Bem-vindo!",
+    "screenName": "Tela inicial",
+    "goScreen": "Ir para a tela inicial",
+    "aiResponse": "Inteligência Artificial"
+  },
+  "navbar": {
+    "subMenu": {
+      "items": {
+        "account": "Conta",
+        "settings": "Configurações",
+        "back": "Sair"
+      }
+    }
+  },
+  "aiResponse": {
+    "text": {
+      "welcome": "Bem vindo à tela de IA",
+      "screenName": "Inteligência Artificial",
+      "askMe": "Me faça uma pergunta",
+      "askAnything": "Me pergunte qualquer coisa!",
+      "enterYourQuestion": "Digite sua pergunta",
+      "toAsk": "Perguntar",
+      "consulting": "Consultando...",
+      "response": "Resposta",
+      "badWord": "Sua mensagem contém palavras inadequadas. Por favor, revise.",
+      "prompt": "Você é uma assistente altamente inteligente, precisa e eficiente. Responda à pergunta do usuário de forma clara, objetiva e detalhada, com o máximo de precisão possível. Adapte a resposta ao contexto da pergunta e forneça informações úteis que possam ajudar o usuário. Certifique-se de manter um tom educado e profissional, respondendo com o nível de profundidade necessário para satisfazer a dúvida do usuário. Caso necessário, explique os conceitos de maneira simples e acessível."
+    },
+    "image": {
+      "askMe": "Me peça uma imagem",
+      "describePrompt": "Descreva o que você deseja gerar",
+      "enterYourPrompt": "Digite seu prompt",
+      "generating": "Gerando...",
+      "generateImage": "Gerar Imagem"
+    }
+  },
+  "reactNativePaper": {
+    "welcome": "Demonstração da biblioteca react native paper",
+    "screenName": "React Native Paper",
+    "goScreen": "Ir para React Native Paper",
+    "materialDesign": "Material Design",
+    "subtitle": "Esta pagina serve como demonstração dos recursos oferecidos pela biblioteca React Native Paper"
+  },
+  "settings": {
+    "screenTitle": "Idioma do Sistema",
+    "languageLabel": "Idioma",
+    "languages": {
+      "portuguese": "Português - Brasil",
+      "english": "Inglês"
+    }
+  },
+  "authenticate": {
+    "login": {
+      "label": "Login",
+      "emailOrUsername": "Email ou Nome de Usuário",
+      "password": "Senha",
+      "register": "Criar conta"
+    },
+    "register": {
+      "name": "Nome",
+      "username": "Nome de Usuário",
+      "email": "Email",
+      "Senha": "Senha",
+      "backToLogin": "Voltar para Login"
+    }
+  },
+  "account": {
+    "title": "Minha Conta",
+    "loading": "Carregando...",
+    "nameLabel": "Nome",
+    "usernameLabel": "Nome de usuário",
+    "namePlaceholder": "Digite seu nome",
+    "usernamePlaceholder": "Digite seu nome de usuário",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Digite seu email",
+    "currentPasswordLabel": "Senha Atual",
+    "currentPasswordPlaceholder": "Digite sua senha atual",
+    "newPasswordLabel": "Nova Senha",
+    "newPasswordPlaceholder": "Digite sua nova senha",
+    "updateButton": "Atualizar Dados",
+    "successNameUpdate": "Nome atualizado com sucesso!",
+    "successEmailUpdate": "Email atualizado com sucesso!",
+    "successPasswordUpdate": "Senha atualizada com sucesso!",
+    "errorFetchUserData": "Não foi possível carregar os dados do usuário.",
+    "errorUpdate": "Não foi possível atualizar os dados.",
+    "errorTitle": "Erro",
+    "successTitle": "Sucesso"
+  },
+  "sessionExpiredModal": {
+    "sessionExpiredLabel": "Sua sessão expirou. Por favor, faça login novamente.",
+    "ok": "Ok"
+  },
+  "changeLanguage": "Mudar Idioma",
+  "back": "Voltar",
+  "enter": "Entrar"
+}

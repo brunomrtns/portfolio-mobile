@@ -1,0 +1,103 @@
+{
+  "applicationName": "Bruno GPT",
+  "homeScreen": {
+    "welcome": "Welcome!",
+    "screenName": "Home Screen",
+    "goScreen": "Go to the Home Screen",
+    "aiResponse": "Artificial Intelligence"
+  },
+  "navbar": {
+    "subMenu": {
+      "items": {
+        "account": "Account",
+        "settings": "Settings",
+        "back": "Back"
+      }
+    }
+  },
+  "firstScreen": {
+    "welcome": "Welcome to the first screen",
+    "screenName": "First Screen",
+    "goScreen": "Go to the First Screen"
+  },
+  "aiResponse": {
+    "text": {
+      "welcome": "Welcome to the AI screen",
+      "screenName": "Artificial Intelligence",
+      "askMe": "Ask me a question",
+      "askAnything": "Ask me anything!",
+      "enterYourQuestion": "Enter your question",
+      "toAsk": "Ask",
+      "consulting": "Consulting...",
+      "response": "Response",
+      "badWord": "Your message contains inappropriate words. Please review.",
+      "prompt": "You are a highly intelligent, precise, and efficient assistant. Respond to the user's question clearly, concisely, and thoroughly, with the highest level of accuracy possible. Adapt your response to the context of the question and provide helpful information to assist the user. Ensure a polite and professional tone, delivering the depth of information required to satisfy the user's inquiry. When necessary, explain concepts in a simple and accessible manner."
+    },
+    "image": {
+      "askMe": "Ask me a picture",
+      "describePrompt": "Describe what you want to generate",
+      "enterYourPrompt": "Enter your prompt",
+      "generating": "Generating...",
+      "generateImage": "Generate Image"
+    }
+  },
+  "reactNativePaper": {
+    "welcome": "Demo react native paper",
+    "screenName": "React Native Paper",
+    "goScreen": "Go to React Native Paper",
+    "materialDesign": "Material Design",
+    "subtitle": "This page serves as a demonstration of the features offered by the React Native Paper library."
+  },
+  "settings": {
+    "screenTitle": "System Language",
+    "languageLabel": "Language",
+    "languages": {
+      "portuguese": "Portuguese - Brazil",
+      "english": "English"
+    }
+  },
+  "authenticate": {
+    "login": {
+      "label": "Login",
+      "emailOrUsername": "Email or Username",
+      "password": "Password",
+      "register": "Create Account"
+    },
+    "register": {
+      "name": "Name",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "backToLogin": "Back to Login"
+    }
+  },
+  "account": {
+    "title": "My Account",
+    "loading": "Loading...",
+    "nameLabel": "Name",
+    "usernameLabel": "Username",
+    "namePlaceholder": "Enter your name",
+    "usernamePlaceholder": "Enter your username",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email",
+    "currentPasswordLabel": "Current Password",
+    "currentPasswordPlaceholder": "Enter your current password",
+    "newPasswordLabel": "New Password",
+    "newPasswordPlaceholder": "Enter your new password",
+    "updateButton": "Update Details",
+    "successNameUpdate": "Name updated successfully!",
+    "successEmailUpdate": "Email updated successfully!",
+    "successPasswordUpdate": "Password updated successfully!",
+    "errorFetchUserData": "Unable to fetch user data.",
+    "errorUpdate": "Unable to update the details.",
+    "errorTitle": "Error",
+    "successTitle": "Success"
+  },
+  "sessionExpiredModal": {
+    "sessionExpiredLabel": "Your session has expired. Please log in again.",
+    "ok": "ok"
+  },
+  "changeLanguage": "Change Language",
+  "back": "Back",
+  "enter": "Enter"
+}

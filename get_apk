@@ -1,0 +1,20 @@
+#!/bin/bash 
+
+set -e
+PARENT_PATH=$(
+    cd "$(dirname "${BASH_SOURCE[0]}")"
+    pwd -P
+)
+PROJECT_NAME="reactnative"
+PROJECT_IN_VM_DIR="/home/ubuntu/${PROJECT_NAME}"
+INSTANCE_NAME="ubuntu-jammy-build-package"
+APK_PATH="${PROJECT_IN_VM_DIR}/android/app/build/outputs/apk/release/app-release.apk"
+
+# Copiar o APK gerado para o host
+echo "Copiando APK gerado de volta para o host..."
+incus file pull "${INSTANCE_NAME}${APK_PATH}" "${PARENT_PATH}/compiled_apk/app-release.apk" || {
+    echo \"Erro ao copiar o APK gerado para o host\"
+    exit 1
+}
+
+echo "Build concluído com sucesso! APK disponível em: ${PARENT_PATH}/compiled_apk/app-release.apk"
